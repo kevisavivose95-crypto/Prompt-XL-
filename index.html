@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt XL - AI Spreadsheet & PDF Toolkit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- File Reading & Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.7.2/mammoth.browser.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs" type="module"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-active {
+            background-color: #1e293b; /* slate-800 */
+            color: #38bdf8; /* sky-400 */
+        }
+        .page {
+            display: none;
+        }
+        .page-active {
+            display: block;
+        }
+        .file-input-custom::file-selector-button {
+            margin-right: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            border-width: 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+            background-color: #334155; /* slate-700 */
+            color: #cbd5e1; /* slate-300 */
+            cursor: pointer;
+            transition: background-color 150ms ease-in-out;
+        }
+        .file-input-custom::file-selector-button:hover {
+            background-color: #475569; /* slate-600 */
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-300">
+
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        <main class="max-w-4xl mx-auto">
+            <header class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Prompt XL</h1>
+                <p class="mt-2 text-md text-slate-400">Your AI-Powered Document Toolkit</p>
+            </header>
+
+            <!-- Navigation Tabs -->
+            <div class="mb-6 flex justify-center border-b border-slate-700">
+                <button id="tab-prompt" class="tab tab-active flex items-center gap-2 py-3 px-6 text-sm font-semibold text-slate-400 rounded-t-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4"/><path d="M13 7.5a4.1 4.1 0 0 0-5.5 5.5"/><path d="M2.998 21.002c-.8-.8-.8-2.1 0-2.9l4-4c.8-.8 2.1-.8 2.9 0l6 6c.8.8.8 2.1 0 2.9l-4 4c-.8.8-2.1-.8-2.9 0Z"/><path d="m20 16-6-6"/></svg>
+                    Prompt to Spreadsheet
+                </button>
+                <button id="tab-pdf" class="tab flex items-center gap-2 py-3 px-6 text-sm font-semibold text-slate-400 rounded-t-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 12v-1h2.5a1.5 1.5 0 0 1 0 3H10v2H8v-4h4.5a1.5 1.5 0 0 0 0-3H8v1"/></svg>
+                    Spreadsheet to PDF
+                </button>
+            </div>
+
+            <!-- Page 1: Prompt to Spreadsheet -->
+            <div id="page-prompt-to-spreadsheet" class="page page-active">
+                <div class="bg-slate-800 rounded-xl shadow-2xl overflow-hidden border border-slate-700">
+                    <div class="p-6 md:p-8">
+                        <div class="space-y-6">
+                            <div>
+                                <label for="file-input" class="block text-sm font-medium text-slate-400 mb-1">Upload a Document (Optional)</label>
+                                <input type="file" id="file-input" accept=".pdf,.docx,.txt" class="block w-full text-sm text-slate-400 file-input-custom">
+                            </div>
+
+                            <div>
+                                <label for="data-input" class="block text-sm font-medium text-slate-400">Paste Data & Instructions</label>
+                                <textarea id="data-input" rows="10" class="mt-1 block w-full rounded-md bg-slate-900 border-slate-600 focus:border-cyan-500 focus:ring-cyan-500 text-slate-100 placeholder:text-slate-500 sm:text-sm p-3" placeholder="Paste document text here, or describe the data you want. You can also include styling instructions.&#10;e.g., 'Create a list of 5 employees with Name, ID, and Department. Highlight rows where Department is 'Sales' in blue.'"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 text-center">
+                            <button id="generate-button" class="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-cyan-500 disabled:bg-slate-600 disabled:bg-none disabled:cursor-not-allowed">
+                                <span id="button-text">Generate Spreadsheet</span>
+                                <svg id="button-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="status-display" class="mt-6 text-center text-sm min-h-[1.25rem]"></div>
+                    </div>
+
+                    <div id="output-section" class="bg-slate-800/50 p-6 md:p-8 border-t border-slate-700 hidden">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+                            <h2 class="text-xl font-bold text-slate-100">Generated Data</h2>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                <div class="w-full sm:w-auto">
+                                    <label for="download-filename" class="sr-only">Download filename</label>
+                                    <input type="text" id="download-filename" class="block w-full rounded-md bg-slate-700 border-slate-600 focus:border-cyan-500 focus:ring-cyan-500 text-slate-100 placeholder:text-slate-400 sm:text-sm p-2" placeholder="Enter filename...">
+                                </div>
+                                <div class="flex space-x-2 justify-end">
+                                    <button id="download-csv-button" class="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-sky-500">
+                                        Download CSV
+                                    </button>
+                                    <button id="download-excel-button" class="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-emerald-500">
+                                        Download Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto rounded-lg border border-slate-700">
+                            <table id="output-table" class="min-w-full divide-y divide-slate-700"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 2: Spreadsheet to PDF -->
+            <div id="page-spreadsheet-to-pdf" class="page">
+                <div class="bg-slate-800 rounded-xl shadow-2xl overflow-hidden border border-slate-700">
+                    <div class="p-6 md:p-8">
+                        <div class="space-y-6">
+                            <div>
+                                <label for="pdf-file-input" class="block text-sm font-medium text-slate-400 mb-1">1. Upload Spreadsheet</label>
+                                <input type="file" id="pdf-file-input" accept=".csv,.xlsx" class="block w-full text-sm text-slate-400 file-input-custom">
+                            </div>
+                            <div id="pdf-download-section" class="hidden">
+                                <label for="pdf-download-filename" class="block text-sm font-medium text-slate-400">2. Download Filename</label>
+                                <input type="text" id="pdf-download-filename" class="mt-1 block w-full rounded-md bg-slate-900 border-slate-600 focus:border-cyan-500 focus:ring-cyan-500 text-slate-100 placeholder:text-slate-400 sm:text-sm p-3" placeholder="Enter filename for PDF...">
+                            </div>
+                        </div>
+
+                         <div class="mt-8 text-center">
+                            <button id="convert-pdf-button" disabled class="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-red-500 disabled:bg-slate-600 disabled:bg-none disabled:cursor-not-allowed">
+                                Convert & Download PDF
+                            </button>
+                        </div>
+                        <div id="pdf-status-display" class="mt-6 text-center text-sm min-h-[1.25rem]"></div>
+                    </div>
+
+                    <div id="pdf-preview-section" class="bg-slate-800/50 p-6 md:p-8 border-t border-slate-700 hidden">
+                         <h2 class="text-xl font-bold text-slate-100 mb-4">Spreadsheet Preview</h2>
+                         <div class="overflow-x-auto rounded-lg border border-slate-700 max-h-96">
+                            <table id="pdf-preview-table" class="min-w-full divide-y divide-slate-700"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <footer class="text-center mt-8 text-slate-500 text-xs">
+                <p>Powered by Google Gemini</p>
+            </footer>
+        </main>
+    </div>
+
+    <script type="module">
+        // --- SDK Imports ---
+        import { GoogleGenAI } from "https://esm.run/@google/genai";
+        import * as XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
+        import { GlobalWorkerOptions, getDocument } from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.mjs";
+        GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.mjs";
+        const { jsPDF } = window.jspdf;
+
+        // --- DOM Element References ---
+        const fileInput = document.getElementById('file-input');
+        const dataInput = document.getElementById('data-input');
+        const generateButton = document.getElementById('generate-button');
+        const buttonText = document.getElementById('button-text');
+        const buttonSpinner = document.getElementById('button-spinner');
+        const statusDisplay = document.getElementById('status-display');
+        const outputSection = document.getElementById('output-section');
+        const outputTable = document.getElementById('output-table');
+        const downloadCsvButton = document.getElementById('download-csv-button');
+        const downloadExcelButton = document.getElementById('download-excel-button');
+        const downloadFilenameInput = document.getElementById('download-filename');
+
+        // Page 2 elements
+        const pdfFileInput = document.getElementById('pdf-file-input');
+        const pdfDownloadSection = document.getElementById('pdf-download-section');
+        const pdfDownloadFilenameInput = document.getElementById('pdf-download-filename');
+        const convertPdfButton = document.getElementById('convert-pdf-button');
+        const pdfStatusDisplay = document.getElementById('pdf-status-display');
+        const pdfPreviewSection = document.getElementById('pdf-preview-section');
+        const pdfPreviewTable = document.getElementById('pdf-preview-table');
+
+        // Navigation elements
+        const tabPrompt = document.getElementById('tab-prompt');
+        const tabPdf = document.getElementById('tab-pdf');
+        const pagePrompt = document.getElementById('page-prompt-to-spreadsheet');
+        const pagePdf = document.getElementById('page-spreadsheet-to-pdf');
+
+        // --- App State ---
+        let generatedJsonData = [];
+        let pdfJsonData = [];
+        let originalUploadedFilename = '';
+        let geminiAPI;
+        
+        // --- Gemini API Call with Exponential Backoff ---
+        async function callGeminiWithRetries(prompt) {
+            if (!geminiAPI) {
+                geminiAPI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            }
+            
+            let attempts = 0;
+            const maxRetries = 3;
+            while (attempts < maxRetries) {
+                try {
+                    const response = await geminiAPI.models.generateContent({
+                        model: "gemini-2.5-flash",
+                        contents: prompt,
+                        config: {
+                            systemInstruction: `Act strictly as a Data Structuring Engine. Analyze the user's input, which may include raw text copied from documents (PDF/Word), or explicit instructions. Your primary goal is to produce a single, clean JSON array of uniform objects representing a spreadsheet. Strictly adhere to the following: 1. Flexibility: You MUST respect all user-defined structural constraints found in the text, such as explicitly mentioned row limits ('Output only 5 rows') or required column names ('Ensure columns are Name, Date, and Amount'). 2. Formatting: The keys of the JSON objects MUST be the identified column headers. 3. Output: Return *only* the raw JSON array string and no other conversational text, markdown formatting, or explanations outside of the JSON block.`,
+                            responseMimeType: "application/json",
+                        }
+                    });
+                    return response.text;
+                } catch (error) {
+                    attempts++;
+                    console.error(`Attempt ${attempts} failed:`, error);
+                    if (attempts >= maxRetries) throw error;
+                    const delay = Math.pow(2, attempts) * 1000;
+                    updateStatus(`API call failed. Retrying in ${delay / 1000}s...`, true, statusDisplay);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        // --- UI Update Functions ---
+        function setLoadingState(isLoading, message = 'Generating...') {
+            generateButton.disabled = isLoading;
+            buttonText.textContent = message;
+            buttonSpinner.classList.toggle('hidden', !isLoading);
+        }
+
+        function updateStatus(message, isError = false, element = statusDisplay) {
+            element.textContent = message;
+            element.className = `mt-6 text-center text-sm min-h-[1.25rem] ${isError ? 'text-red-400' : 'text-slate-400'}`;
+        }
+        
+        function escapeRegExp(string) {
+            return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        }
+        
+        function getCellClasses(value, header, rules, row) {
+            if (!rules) return '';
+            const classes = new Set();
+            const lowerRules = rules.toLowerCase();
+            const lowerHeader = header.toLowerCase();
+
+            const colorMap = {
+                red: 'bg-red-900/50', green: 'bg-green-900/50', blue: 'bg-blue-900/50',
+                yellow: 'bg-yellow-900/50', purple: 'bg-purple-900/50',
+                indigo: 'bg-indigo-900/50', pink: 'bg-pink-900/50'
+            };
+
+            const ruleClauses = lowerRules.split(/[,.;]|and\b/);
+
+            for (const clause of ruleClauses) {
+                const trimmedClause = clause.trim();
+                if (!trimmedClause) continue;
+                const foundColor = Object.keys(colorMap).find(c => trimmedClause.includes(c));
+                if (!foundColor) continue;
+
+                const columnRegex = new RegExp(`\\b${escapeRegExp(lowerHeader)}\\b.*column|column.*\\b${escapeRegExp(lowerHeader)}\\b`);
+                if (columnRegex.test(trimmedClause)) {
+                    classes.add(colorMap[foundColor]);
+                    continue;
+                }
+
+                const rowMatch = trimmedClause.match(/rows?.*where.*['"]?(.+?)['"]?.*is.*['"]?(.+?)['"]?/);
+                if (rowMatch) {
+                    const matchHeader = rowMatch[1].trim();
+                    const matchValue = rowMatch[2].trim();
+                    const actualHeaderKey = Object.keys(row).find(k => k.toLowerCase() === matchHeader);
+                    if (actualHeaderKey && String(row[actualHeaderKey]).toLowerCase().trim() === matchValue) {
+                        classes.add(colorMap[foundColor]);
+                    }
+                    continue;
+                }
+                
+                if (trimmedClause.includes('negative')) {
+                    const numValue = parseFloat(String(value).replace(/[^0-9.-]+/g, ""));
+                    if (!isNaN(numValue) && numValue < 0) {
+                        classes.add(colorMap[foundColor]);
+                        if (foundColor === 'red') classes.add('text-red-400');
+                    }
+                    continue;
+                }
+            }
+            return Array.from(classes).join(' ');
+        }
+        
+        function getCellStyleForExcel(value, header, rules, row) {
+            if (!rules) return null;
+            let style = {};
+            const lowerRules = rules.toLowerCase();
+            const lowerHeader = header.toLowerCase();
+            
+            const colorMap = {
+                red: { fill: { fgColor: { rgb: "FFC7CE" } }, font: { color: { rgb: "9C0006" } } },
+                green: { fill: { fgColor: { rgb: "C6EFCE" } } },
+                blue: { fill: { fgColor: { rgb: "DDEBF7" } } },
+                yellow: { fill: { fgColor: { rgb: "FFFFCC" } } },
+                purple: { fill: { fgColor: { rgb: "E6E0EC" } } },
+                indigo: { fill: { fgColor: { rgb: "C9D5F4" } } },
+                pink: { fill: { fgColor: { rgb: "F8C8DC" } } }
+            };
+
+            const ruleClauses = lowerRules.split(/[,.;]|and\b/);
+
+            for (const clause of ruleClauses) {
+                const trimmedClause = clause.trim();
+                if (!trimmedClause) continue;
+                const foundColor = Object.keys(colorMap).find(c => trimmedClause.includes(c));
+                if (!foundColor) continue;
+                const colorStyle = colorMap[foundColor];
+
+                const columnRegex = new RegExp(`\\b${escapeRegExp(lowerHeader)}\\b.*column|column.*\\b${escapeRegExp(lowerHeader)}\\b`);
+                if (columnRegex.test(trimmedClause)) {
+                    style = { ...style, fill: colorStyle.fill };
+                    continue;
+                }
+
+                const rowMatch = trimmedClause.match(/rows?.*where.*['"]?(.+?)['"]?.*is.*['"]?(.+?)['"]?/);
+                if (rowMatch) {
+                    const matchHeader = rowMatch[1].trim();
+                    const matchValue = rowMatch[2].trim();
+                    const actualHeaderKey = Object.keys(row).find(k => k.toLowerCase() === matchHeader);
+                    if (actualHeaderKey && String(row[actualHeaderKey]).toLowerCase().trim() === matchValue) {
+                        style = { ...style, fill: colorStyle.fill };
+                    }
+                    continue;
+                }
+                
+                if (trimmedClause.includes('negative')) {
+                    const numValue = parseFloat(String(value).replace(/[^0-9.-]+/g, ""));
+                    if (!isNaN(numValue) && numValue < 0) {
+                        style = { ...style, ...colorStyle };
+                    }
+                    continue;
+                }
+            }
+            return Object.keys(style).length > 0 ? style : null;
+        }
+
+        function renderTable(data, stylingRules, tableElement) {
+            if (!Array.isArray(data) || data.length === 0) return false;
+            tableElement.innerHTML = '';
+            const headers = Object.keys(data[0]);
+            const thead = document.createElement('thead');
+            thead.className = "bg-slate-700/50";
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.scope = "col";
+                th.className = "px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider";
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            tableElement.appendChild(thead);
+            const tbody = document.createElement('tbody');
+            tbody.className = "divide-y divide-slate-700";
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    td.className = "px-6 py-4 whitespace-nowrap text-sm text-slate-300";
+                    const cellValue = row[header];
+                    td.textContent = cellValue;
+                    if (stylingRules) {
+                        const dynamicClasses = getCellClasses(cellValue, header, stylingRules, row);
+                        if (dynamicClasses) td.classList.add(...dynamicClasses.split(' '));
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            tableElement.appendChild(tbody);
+            return true;
+        }
+        
+        function downloadCSV() {
+            if (!generatedJsonData || generatedJsonData.length === 0) return;
+            const filename = downloadFilenameInput.value.trim() || 'ai_generated_spreadsheet';
+            const headers = Object.keys(generatedJsonData[0]);
+            const escapeCsvCell = (cell) => {
+                let cellStr = String(cell === null || cell === undefined ? '' : cell).replace(/"/g, '""');
+                if (cellStr.search(/([",\n])/g) >= 0) cellStr = `"${cellStr}"`;
+                return cellStr;
+            };
+            const headerRow = headers.map(escapeCsvCell).join(',');
+            const rows = generatedJsonData.map(row => headers.map(header => escapeCsvCell(row[header])).join(','));
+            const csvContent = [headerRow, ...rows].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${filename}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function downloadExcel() {
+            if (!generatedJsonData || generatedJsonData.length === 0) return;
+            const filename = downloadFilenameInput.value.trim() || 'ai_generated_spreadsheet';
+            const worksheet = XLSX.utils.json_to_sheet(generatedJsonData);
+            const stylingRules = dataInput.value.trim();
+            if (stylingRules) {
+                const headers = Object.keys(generatedJsonData[0]);
+                generatedJsonData.forEach((row, rowIndex) => {
+                    headers.forEach((header, colIndex) => {
+                        const cellValue = row[header];
+                        const cellStyle = getCellStyleForExcel(cellValue, header, stylingRules, row);
+                        if (cellStyle) {
+                            const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex });
+                            if (worksheet[cellAddress]) worksheet[cellAddress].s = cellStyle;
+                        }
+                    });
+                });
+                headers.forEach((header, colIndex) => {
+                    const headerCellStyle = getCellStyleForExcel("header", header, stylingRules, {}); // Pass empty row for header
+                    if (headerCellStyle && headerCellStyle.fill) {
+                       const headerAddress = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+                       if(worksheet[headerAddress]) {
+                           worksheet[headerAddress].s = { ...headerCellStyle, font: { ...(headerCellStyle.font || {}), bold: true } };
+                       }
+                    }
+                });
+            }
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+            XLSX.writeFile(workbook, `${filename}.xlsx`);
+        }
+
+        // --- Event Handlers ---
+        async function handleGenerateClick() {
+            const prompt = dataInput.value.trim();
+            if (!prompt) {
+                updateStatus("Please enter some data or instructions, or upload a file.", true);
+                return;
+            }
+            setLoadingState(true, 'Generating...');
+            updateStatus("Initializing AI model...");
+            outputSection.classList.add('hidden');
+            generatedJsonData = [];
+            try {
+                updateStatus("Generating structured data...");
+                const rawResponse = await callGeminiWithRetries(prompt);
+                const parsedData = JSON.parse(rawResponse);
+                generatedJsonData = parsedData;
+                const stylingRules = dataInput.value.trim();
+                const success = renderTable(generatedJsonData, stylingRules, outputTable);
+                if (success) {
+                    updateStatus("Success! Your spreadsheet is ready.", false);
+                    downloadFilenameInput.value = originalUploadedFilename || 'ai_generated_spreadsheet';
+                    outputSection.classList.remove('hidden');
+                } else {
+                    updateStatus("The AI returned empty or invalid data. Try refining your prompt.", true);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                updateStatus(`An error occurred: ${error.message || 'Unknown error'}`, true);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+        
+        async function handleFileChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            setLoadingState(true, 'Reading file...');
+            updateStatus(`Reading "${file.name}"...`);
+            dataInput.value = '';
+            originalUploadedFilename = file.name.split('.').slice(0, -1).join('.');
+
+            try {
+                const reader = new FileReader();
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                
+                if (fileExtension === 'txt') {
+                    reader.onload = (e) => { dataInput.value = e.target.result; updateStatus(`Loaded content from "${file.name}".`); setLoadingState(false); };
+                    reader.readAsText(file);
+                } else if (fileExtension === 'pdf') {
+                    reader.onload = async (e) => {
+                        try {
+                            const pdf = await getDocument(e.target.result).promise;
+                            let fullText = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const textContent = await page.getTextContent();
+                                fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                            }
+                            dataInput.value = fullText;
+                            updateStatus(`Loaded content from "${file.name}".`);
+                        } catch (pdfError) { throw new Error("Could not parse PDF file."); } 
+                        finally { setLoadingState(false); }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else if (fileExtension === 'docx') {
+                     reader.onload = async (e) => {
+                        try {
+                            const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+                            dataInput.value = result.value;
+                            updateStatus(`Loaded content from "${file.name}".`);
+                        } catch (docxError) { throw new Error("Could not parse DOCX file."); } 
+                        finally { setLoadingState(false); }
+                     };
+                     reader.readAsArrayBuffer(file);
+                } else {
+                    throw new Error("Unsupported file type.");
+                }
+            } catch (error) {
+                updateStatus(error.message, true);
+                setLoadingState(false);
+            } finally {
+                fileInput.value = '';
+            }
+        }
+        
+        function handlePdfFileChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            updateStatus('Reading spreadsheet...', false, pdfStatusDisplay);
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                try {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    pdfJsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                    if (renderTable(pdfJsonData, null, pdfPreviewTable)) {
+                        pdfPreviewSection.classList.remove('hidden');
+                        pdfDownloadSection.classList.remove('hidden');
+                        const filename = file.name.split('.').slice(0, -1).join('.');
+                        pdfDownloadFilenameInput.value = filename;
+                        convertPdfButton.disabled = false;
+                        updateStatus(`Loaded "${file.name}" successfully. Ready to convert.`, false, pdfStatusDisplay);
+                    } else {
+                        throw new Error('Spreadsheet appears to be empty or invalid.');
+                    }
+                } catch (error) {
+                    console.error('Spreadsheet parse error:', error);
+                    updateStatus(error.message, true, pdfStatusDisplay);
+                    pdfPreviewSection.classList.add('hidden');
+                    pdfDownloadSection.classList.add('hidden');
+                    convertPdfButton.disabled = true;
+                }
+            };
+            
+            reader.onerror = () => {
+                 updateStatus('Failed to read the file.', true, pdfStatusDisplay);
+                 convertPdfButton.disabled = true;
+            };
+
+            reader.readAsBinaryString(file);
+        }
+
+        function handleConvertToPdf() {
+            if (!pdfJsonData || pdfJsonData.length === 0) {
+                updateStatus('No data to convert.', true, pdfStatusDisplay);
+                return;
+            }
+            const filename = pdfDownloadFilenameInput.value.trim() || 'converted_spreadsheet';
+            updateStatus('Generating PDF...', false, pdfStatusDisplay);
+            
+            try {
+                const doc = new jsPDF();
+                const head = [Object.keys(pdfJsonData[0])];
+                const body = pdfJsonData.map(row => Object.values(row));
+                
+                doc.autoTable({ head, body });
+                doc.save(`${filename}.pdf`);
+                updateStatus('PDF downloaded successfully!', false, pdfStatusDisplay);
+            } catch (error) {
+                console.error("PDF generation error:", error);
+                updateStatus('Failed to generate PDF.', true, pdfStatusDisplay);
+            }
+        }
+        
+        function switchTab(activeTab, activePage) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active'));
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('page-active'));
+            activeTab.classList.add('tab-active');
+            activePage.classList.add('page-active');
+        }
+
+        // --- Main Initialization ---
+        function main() {
+            // Page 1 Listeners
+            generateButton.addEventListener('click', handleGenerateClick);
+            downloadCsvButton.addEventListener('click', downloadCSV);
+            downloadExcelButton.addEventListener('click', downloadExcel);
+            fileInput.addEventListener('change', handleFileChange);
+
+            // Page 2 Listeners
+            pdfFileInput.addEventListener('change', handlePdfFileChange);
+            convertPdfButton.addEventListener('click', handleConvertToPdf);
+            
+            // Navigation Listeners
+            tabPrompt.addEventListener('click', () => switchTab(tabPrompt, pagePrompt));
+            tabPdf.addEventListener('click', () => switchTab(tabPdf, pagePdf));
+        }
+
+        main();
+
+    </script>
+</body>
+</html>

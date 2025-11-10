@@ -1,0 +1,5 @@
+{
+  "name": "Prompt XL refined",
+  "description": "An intelligent web application that converts unstructured text into a structured, styled, and downloadable CSV spreadsheet using AI. Paste document content or provide instructions, and let the AI generate a clean, organized table.",
+  "requestFramePermissions": []
+}
